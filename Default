@@ -1,42 +1,63 @@
+# Function to log messages to the console
+function Log-Message {
+    param (
+        [string]$message
+    )
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logMessage = "$timestamp - $message"
+    Write-Output $logMessage
+}
+
 # Step 1: Run the custom command and wait for it to finish
+Log-Message "Starting custom command: Start-OSDCloud"
 try {
-    Start-Process -FilePath "powershell.exe" -ArgumentList "Start-OSDCloud -Firmware -ZTI -OSName 'Windows 11 24H2 x64' -OSEdition Enterprise -OSLanguage en-us -OSActivation Volume" -Wait
+    Start-Process -FilePath "powershell.exe" -ArgumentList "Start-OSDCloud -Firmware -Restart -ZTI -OSName 'Windows 11 24H2 x64' -OSEdition Enterprise -OSLanguage en-us -OSActivation Volume" -Wait
+    Log-Message "Custom command completed successfully."
 } catch {
-    Write-Error "Failed to run Start-OSDCloud command: $_"
+    Log-Message "Failed to run Start-OSDCloud command: $_"
     exit 1
 }
 
 # Step 2: Search for the "PatchedBootfiles" folder on all drives
+Log-Message "Searching for 'PatchedBootfiles' folder on all drives."
 $patchedBootFilesPath = Get-PSDrive -PSProvider FileSystem | ForEach-Object {
     Get-ChildItem -Path $_.Root -Recurse -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq "PatchedBootfiles" }
 } | Select-Object -First 1
 
 if (-not $patchedBootFilesPath) {
-    Write-Error "PatchedBootfiles folder not found on any drive."
+    Log-Message "PatchedBootfiles folder not found on any drive."
     exit 1
+} else {
+    Log-Message "Found 'PatchedBootfiles' folder at: $($patchedBootFilesPath.FullName)"
 }
 
 # Step 3: Use mountvol to mount the system volume to S:
+Log-Message "Mounting system volume to S: drive."
 try {
     Start-Process -FilePath "cmd.exe" -ArgumentList "/c mountvol S: /S" -Wait
+    Log-Message "System volume mounted successfully."
 } catch {
-    Write-Error "Failed to mount system volume: $_"
+    Log-Message "Failed to mount system volume: $_"
     exit 1
 }
 
 # Step 4: Copy all folders from \PatchedBootFiles\* to S:\ overwriting all files without asking for confirmation
+Log-Message "Copying files from 'PatchedBootfiles' to S: drive."
 try {
     Copy-Item -Path "$($patchedBootFilesPath.FullName)\*" -Destination "S:\" -Recurse -Force
+    Log-Message "Files copied successfully."
 } catch {
-    Write-Error "Failed to copy files: $_"
+    Log-Message "Failed to copy files: $_"
     exit 1
 }
 
 # Step 5: Unmount the system volume
+Log-Message "Unmounting system volume from S: drive."
 try {
     Start-Process -FilePath "cmd.exe" -ArgumentList "/c mountvol S: /d" -Wait
+    Log-Message "System volume unmounted successfully."
 } catch {
-    Write-Error "Failed to unmount system volume: $_"
+    Log-Message "Failed to unmount system volume: $_"
     exit 1
 }
 
@@ -46,12 +67,15 @@ $destinationPath = "C:\OSDCloud\CU\windows11.0-kb5058411-x64_fc93a482441b42bcdbb
 
 if (-not (Test-Path -Path "C:\OSDCloud\CU")) {
     New-Item -ItemType Directory -Path "C:\OSDCloud\CU"
+    Log-Message "Created directory: C:\OSDCloud\CU"
 }
 
+Log-Message "Downloading update package from $updateUrl"
 try {
     Invoke-WebRequest -Uri $updateUrl -OutFile $destinationPath
+    Log-Message "Update package downloaded successfully to $destinationPath"
 } catch {
-    Write-Error "Failed to download update package: $_"
+    Log-Message "Failed to download update package: $_"
     exit 1
 }
 
@@ -60,12 +84,15 @@ $scratchDirectory = "C:\windows\temp\CUScratch"
 
 if (-not (Test-Path -Path $scratchDirectory)) {
     New-Item -ItemType Directory -Path $scratchDirectory
+    Log-Message "Created scratch directory: $scratchDirectory"
 }
 
+Log-Message "Adding Windows package from $destinationPath"
 try {
     Add-WindowsPackage -Path "C:\" -PackagePath $destinationPath -ScratchDirectory $scratchDirectory
+    Log-Message "Windows package added successfully."
 } catch {
-    Write-Error "Failed to add Windows package: $_"
+    Log-Message "Failed to add Windows package: $_"
     exit 1
 }
 
@@ -74,19 +101,23 @@ $resetBaseScratchDirectory = "C:\windows\temp\ResetBaseScratch"
 
 if (-not (Test-Path -Path $resetBaseScratchDirectory)) {
     New-Item -ItemType Directory -Path $resetBaseScratchDirectory
+    Log-Message "Created ResetBase scratch directory: $resetBaseScratchDirectory"
 }
 
+Log-Message "Running DISM command for cleanup and reset base."
 try {
     Start-Process -FilePath "cmd.exe" -ArgumentList "/c Dism.exe /image:C:\ /Cleanup-Image /StartComponentCleanup /ResetBase /ScratchDirectory:$resetBaseScratchDirectory" -Wait
+    Log-Message "DISM command completed successfully."
 } catch {
-    Write-Error "Failed to run DISM command: $_"
+    Log-Message "Failed to run DISM command: $_"
     exit 1
 }
 
 # Step 9: Restart the computer
+Log-Message "Restarting the computer."
 try {
     Restart-Computer -Force
 } catch {
-    Write-Error "Failed to restart the computer: $_"
+    Log-Message "Failed to restart the computer: $_"
     exit 1
 }
