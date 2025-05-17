@@ -85,21 +85,3 @@ if ($updatePackagePath) {
     New-Item -ItemType Directory -Path "C:\OSDCloud\CU" -Force
 
     Step-Through "Downloading update package from $updateUrl using curl"
-    try {
-        Invoke-WebRequest -Uri $updateUrl -OutFile $destinationPath
-        Log-Message "Update package downloaded successfully to $destinationPath"
-    } catch {
-        Log-Message "Failed to download update package using curl: $_"
-    }
-}
-
-# Step 7: Verify the downloaded file's SHA1 hash
-Step-Through "Verifying the SHA1 hash of the update file."
-try {
-    $fileHash = Get-FileHash -Path $destinationPath -Algorithm SHA1
-    if ($fileHash.Hash.ToLower() -eq $expectedHash.ToLower()) {
-        Log-Message "SHA1 hash verification successful."
-    } else {
-        Log-Message "SHA1 hash verification failed. Expected: $expectedHash, Got: $($fileHash.Hash)"
-    }
-} catch {
