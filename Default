@@ -51,14 +51,19 @@ try {
     Log-Message "Failed to mount system volume: $_"
 }
 
+
 # Step 4: Copy all folders from \PatchedBootFiles\* to S:\ overwriting all files without asking for confirmation
-Step-Through "Copying files from 'PatchedBootfiles' to S: drive."
+Step-Through "Preparing to copy files from 'PatchedBootfiles' to S: drive."
+Log-Message "PatchedBootfiles folder path: $($patchedBootFilesPath.FullName)"
+Step-Through "Press space to continue with copying files."
 try {
-    Copy-Item -Path "$($patchedBootFilesPath.FullName)\*" -Destination "S:\" -Recurse -Force
-    Log-Message "Files copied successfully."
+    Step-Through "Press space to continue with copying files."
+    Copy-Item -Path "$($patchedBootFilesPath.FullName)\*" -Destination "S:\" -Recurse -Force
+    Log-Message "Files copied successfully."
 } catch {
-    Log-Message "Failed to copy files: $_"
+    Log-Message "Failed to copy files: $_"
 }
+
 
 # Step 5: Unmount the system volume
 Step-Through "Unmounting system volume from S: drive."
