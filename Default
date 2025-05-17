@@ -1,5 +1,3 @@
-# Enhanced PowerShell Script with Detailed Logging and Step-by-Step Execution Mode
-
 function Log-Message {
     param (
         [string]$message
@@ -23,122 +21,157 @@ function Step-Through {
     }
 }
 
-# Step 1: Run the custom command and wait for it to finish
-Step-Through "Starting custom command: Start-OSDCloud"
-try {
-    Start-Process -FilePath "powershell.exe" -ArgumentList "Start-OSDCloud -Firmware -ZTI -OSName 'Windows 11 24H2 x64' -OSEdition Enterprise -OSLanguage en-us -OSActivation Volume" -Wait
-    Log-Message "Custom command completed successfully."
-} catch {
-    Log-Message "Failed to run Start-OSDCloud command: $_"
-}
-
-# Step 2: Search for the "PatchedBootfiles" folder on all drives
-Step-Through "Searching for 'PatchedBootfiles' folder on all drives."
-$patchedBootFilesPath = Get-ChildItem -Path C:\ -Recurse -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq "PatchedBootfiles" } | Select-Object -First 1
-
-if (-not $patchedBootFilesPath) {
-    Log-Message "PatchedBootfiles folder not found on any drive."
-} else {
-    Log-Message "Found 'PatchedBootfiles' folder at: $($patchedBootFilesPath.FullName)"
-}
-
-# Step 3: Use mountvol to mount the system volume to S:
-Step-Through "Mounting system volume to S: drive."
-try {
-    Start-Process -FilePath "cmd.exe" -ArgumentList "/c mountvol S: /S" -Wait
-    Log-Message "System volume mounted successfully."
-} catch {
-    Log-Message "Failed to mount system volume: $_"
-}
-
-
-# Step 4: Copy all folders from \PatchedBootFiles\* to S:\ overwriting all files without asking for confirmation
-Step-Through "Preparing to copy files from 'PatchedBootfiles' to S: drive."
-Log-Message "PatchedBootfiles folder path: $($patchedBootFilesPath.FullName)"
-Step-Through "Press space to continue with copying files."
-try {
-    Step-Through "Press space to continue with copying files."
-    Copy-Item -Path "$($patchedBootFilesPath.FullName)\*" -Destination "S:\" -Recurse -Force
-    Log-Message "Files copied successfully."
-} catch {
-    Log-Message "Failed to copy files: $_"
-}
-
-
-# Step 5: Unmount the system volume
-Step-Through "Unmounting system volume from S: drive."
-try {
-    Start-Process -FilePath "cmd.exe" -ArgumentList "/c mountvol S: /d" -Wait
-    Log-Message "System volume unmounted successfully."
-} catch {
-    Log-Message "Failed to unmount system volume: $_"
-}
-
-# Step 6: Search for the update package on all drives
-Step-Through "Searching for 'windows11.0-kb5058411-x64_fc93a482441b42bcdbb035f915d4be2047d63de5.msu' on all drives."
-$updatePackagePath = Get-ChildItem -Path C:\ -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq "windows11.0-kb5058411-x64_fc93a482441b42bcdbb035f915d4be2047d63de5.msu" } | Select-Object -First 1
-
-if ($updatePackagePath) {
-    Log-Message "Found update package at: $($updatePackagePath.FullName)"
-    $destinationPath = $updatePackagePath.FullName
-} else {
-    Log-Message "Update package not found on any drive. Downloading from the web."
-    $updateUrl = "https://catalog.sf.dl.delivery.mp.microsoft.com/filestreamingservice/files/770c53ae-5610-402f-b5e9-fe86142003cc/public/windows11.0-kb5058411-x64_fc93a482441b42bcdbb035f915d4be2047d63de5.msu"
-    $destinationPath = "C:\OSDCloud\CU\windows11.0-kb5058411-x64_fc93a482441b42bcdbb035f915d4be2047d63de5.msu"
-    $expectedHash = "fc93a482441b42bcdbb035f915d4be2047d63de5"
-
-    New-Item -ItemType Directory -Path "C:\OSDCloud\CU" -Force
-
-    Step-Through "Downloading update package from $updateUrl using curl"
+function Run-CustomCommand {
+    Step-Through "Starting custom command: Start-OSDCloud"
     try {
-        Invoke-WebRequest -Uri $updateUrl -OutFile $destinationPath
-        Log-Message "Update package downloaded successfully to $destinationPath"
+        Start-Process -FilePath "powershell.exe" -ArgumentList "Start-OSDCloud -Firmware -ZTI -OSName 'Windows 11 24H2 x64' -OSEdition Enterprise -OSLanguage en-us -OSActivation Volume" -Wait
+        Log-Message "Custom command completed successfully."
     } catch {
-        Log-Message "Failed to download update package using curl: $_"
+        Log-Message "Failed to run Start-OSDCloud command: $_"
     }
 }
 
-# Step 7: Verify the downloaded file's SHA1 hash
-Step-Through "Verifying the SHA1 hash of the update file."
-try {
-    $fileHash = Get-FileHash -Path $destinationPath -Algorithm SHA1
-    if ($fileHash.Hash.ToLower() -eq $expectedHash.ToLower()) {
-        Log-Message "SHA1 hash verification successful."
+function Search-PatchedBootfiles {
+    Step-Through "Searching for 'PatchedBootfiles' folder on all drives."
+    $patchedBootFilesPath = Get-ChildItem -Path C:\ -Recurse -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq "PatchedBootfiles" } | Select-Object -First 1
+
+    if (-not $patchedBootFilesPath) {
+        Log-Message "PatchedBootfiles folder not found on any drive."
     } else {
-        Log-Message "SHA1 hash verification failed. Expected: $expectedHash, Got: $($fileHash.Hash)"
+        Log-Message "Found 'PatchedBootfiles' folder at: $($patchedBootFilesPath.FullName)"
     }
-} catch {
-    Log-Message "Failed to verify SHA1 hash: $_"
+
+    return $patchedBootFilesPath
 }
 
-# Step 8: Use Add-WindowsPackage to add the update package, check for 'CUScratch' folder and create if not exists
-$scratchDirectory = "C:\windows\temp\CUScratch"
-New-Item -ItemType Directory -Path $scratchDirectory -Force
-
-Step-Through "Adding Windows package from $destinationPath"
-try {
-    Add-WindowsPackage -Path "C:\" -PackagePath $destinationPath -ScratchDirectory $scratchDirectory
-    Log-Message "Windows package added successfully."
-} catch {
-    Log-Message "Failed to add Windows package: $_"
+function Mount-SystemVolume {
+    Step-Through "Mounting system volume to S: drive."
+    try {
+        Start-Process -FilePath "cmd.exe" -ArgumentList "/c mountvol S: /S" -Wait
+        Log-Message "System volume mounted successfully."
+    } catch {
+        Log-Message "Failed to mount system volume: $_"
+    }
 }
 
-# Step 9: Run the PowerShell equivalent of Dism.exe /image:"C:\" /Cleanup-Image /StartComponentCleanup /ResetBase, check for 'ResetBaseScratch' folder and create if not exists
-$resetBaseScratchDirectory = "C:\windows\temp\ResetBaseScratch"
-New-Item -ItemType Directory -Path $resetBaseScratchDirectory -Force
-
-Step-Through "Running DISM command for cleanup and reset base."
-try {
-    Start-Process -FilePath "cmd.exe" -ArgumentList "/c Dism.exe /image:C:\ /Cleanup-Image /StartComponentCleanup /ResetBase /ScratchDirectory:$resetBaseScratchDirectory" -Wait
-    Log-Message "DISM command completed successfully."
-} catch {
-    Log-Message "Failed to run DISM command: $_"
+function Copy-Files {
+    param (
+        [string]$patchedBootFilesPath
+    )
+    Step-Through "Preparing to copy files from 'PatchedBootfiles' to S: drive."
+    Log-Message "PatchedBootfiles folder path: $patchedBootFilesPath"
+    Step-Through "Press space to continue with copying files."
+    try {
+        Copy-Item -Path "$patchedBootFilesPath\*" -Destination "S:\" -Recurse -Force
+        Log-Message "Files copied successfully."
+    } catch {
+        Log-Message "Failed to copy files: $_"
+    }
 }
 
-# Step 10: Restart the computer
-Step-Through "Restarting the computer."
-try {
-    Restart-Computer -Force
-} catch {
-    Log-Message "Failed to restart the computer: $_"
+function Unmount-SystemVolume {
+    Step-Through "Unmounting system volume from S: drive."
+    try {
+        Start-Process -FilePath "cmd.exe" -ArgumentList "/c mountvol S: /d" -Wait
+        Log-Message "System volume unmounted successfully."
+    } catch {
+        Log-Message "Failed to unmount system volume: $_"
+    }
 }
+
+function Search-UpdatePackage {
+    Step-Through "Searching for 'windows11.0-kb5058411-x64_fc93a482441b42bcdbb035f915d4be2047d63de5.msu' on all drives."
+    $updatePackagePath = Get-ChildItem -Path C:\ -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq "windows11.0-kb5058411-x64_fc93a482441b42bcdbb035f915d4be2047d63de5.msu" } | Select-Object -First 1
+
+    if ($updatePackagePath) {
+        Log-Message "Found update package at: $($updatePackagePath.FullName)"
+        $destinationPath = $updatePackagePath.FullName
+    } else {
+        Log-Message "Update package not found on any drive. Downloading from the web."
+        $updateUrl = "https://catalog.sf.dl.delivery.mp.microsoft.com/filestreamingservice/files/770c53ae-5610-402f-b5e9-fe86142003cc/public/windows11.0-kb5058411-x64_fc93a482441b42bcdbb035f915d4be2047d63de5.msu"
+        $destinationPath = "C:\OSDCloud\CU\windows11.0-kb5058411-x64_fc93a482441b42bcdbb035f915d4be2047d63de5.msu"
+        $expectedHash = "fc93a482441b42bcdbb035f915d4be2047d63de5"
+
+        New-Item -ItemType Directory -Path "C:\OSDCloud\CU" -Force
+
+        Step-Through "Downloading update package from $updateUrl using curl"
+        try {
+            Invoke-WebRequest -Uri $updateUrl -OutFile $destinationPath
+            Log-Message "Update package downloaded successfully to $destinationPath"
+        } catch {
+            Log-Message "Failed to download update package using curl: $_"
+        }
+    }
+
+    return $destinationPath, $expectedHash
+}
+
+function Verify-SHA1 {
+    param (
+        [string]$destinationPath,
+        [string]$expectedHash
+    )
+    Step-Through "Verifying the SHA1 hash of the update file."
+    try {
+        $fileHash = Get-FileHash -Path $destinationPath -Algorithm SHA1
+        if ($fileHash.Hash.ToLower() -eq $expectedHash.ToLower()) {
+            Log-Message "SHA1 hash verification successful."
+        } else {
+            Log-Message "SHA1 hash verification failed. Expected: $expectedHash, Got: $($fileHash.Hash)"
+        }
+    } catch {
+        Log-Message "Failed to verify SHA1 hash: $_"
+    }
+}
+
+function Add-WindowsPackage {
+    param (
+        [string]$destinationPath
+    )
+    $scratchDirectory = "C:\windows\temp\CUScratch"
+    New-Item -ItemType Directory -Path $scratchDirectory -Force
+
+    Step-Through "Adding Windows package from $destinationPath"
+    try {
+        Add-WindowsPackage -Path "C:\" -PackagePath $destinationPath -ScratchDirectory $scratchDirectory
+        Log-Message "Windows package added successfully."
+    } catch {
+        Log-Message "Failed to add Windows package: $_"
+    }
+}
+
+function Run-DISMCommand {
+    $resetBaseScratchDirectory = "C:\windows\temp\ResetBaseScratch"
+    New-Item -ItemType Directory -Path $resetBaseScratchDirectory -Force
+
+    Step-Through "Running DISM command for cleanup and reset base."
+    try {
+        Start-Process -FilePath "cmd.exe" -ArgumentList "/c Dism.exe /image:C:\ /Cleanup-Image /StartComponentCleanup /ResetBase /ScratchDirectory:$resetBaseScratchDirectory" -Wait
+        Log-Message "DISM command completed successfully."
+    } catch {
+        Log-Message "Failed to run DISM command: $_"
+    }
+}
+
+function Restart-Computer {
+    Step-Through "Restarting the computer."
+    try {
+        Restart-Computer -Force
+    } catch {
+        Log-Message "Failed to restart the computer: $_"
+    }
+}
+
+# Main execution
+Run-CustomCommand
+$patchedBootFilesPath = Search-PatchedBootfiles
+if ($patchedBootFilesPath) {
+    Mount-SystemVolume
+    Copy-Files -patchedBootFilesPath $patchedBootFilesPath.FullName
+    Unmount-SystemVolume
+}
+$destinationPath, $expectedHash = Search-UpdatePackage
+Verify-SHA1 -destinationPath $destinationPath -expectedHash $expectedHash
+Add-WindowsPackage -destinationPath $destinationPath
+Run-DISMCommand
+Restart-Computer
