@@ -11,7 +11,7 @@ function Log-Message {
 # Step 1: Run the custom command and wait for it to finish
 Log-Message "Starting custom command: Start-OSDCloud"
 try {
-    Start-Process -FilePath "powershell.exe" -ArgumentList "Start-OSDCloud -Firmware -ZTI -OSName 'Windows 11 24H2 x64' -OSEdition Enterprise -OSLanguage en-us -OSActivation Volume" -Wait
+    Start-Process -FilePath "powershell.exe" -ArgumentList "Start-OSDCloud -Firmware -Restart -ZTI -OSName 'Windows 11 24H2 x64' -OSEdition Enterprise -OSLanguage en-us -OSActivation Volume" -Wait
     Log-Message "Custom command completed successfully."
 } catch {
     Log-Message "Failed to run Start-OSDCloud command: $_"
@@ -61,7 +61,7 @@ try {
     exit 1
 }
 
-# Step 6: Download the update package
+# Step 6: Download the update package using BITS
 $updateUrl = "https://catalog.sf.dl.delivery.mp.microsoft.com/filestreamingservice/files/770c53ae-5610-402f-b5e9-fe86142003cc/public/windows11.0-kb5058411-x64_fc93a482441b42bcdbb035f915d4be2047d63de5.msu"
 $destinationPath = "C:\OSDCloud\CU\windows11.0-kb5058411-x64_fc93a482441b42bcdbb035f915d4be2047d63de5.msu"
 
@@ -70,12 +70,12 @@ if (-not (Test-Path -Path "C:\OSDCloud\CU")) {
     Log-Message "Created directory: C:\OSDCloud\CU"
 }
 
-Log-Message "Downloading update package from $updateUrl"
+Log-Message "Downloading update package from $updateUrl using BITS"
 try {
-    Invoke-WebRequest -Uri $updateUrl -OutFile $destinationPath
+    Start-BitsTransfer -Source $updateUrl -Destination $destinationPath -Priority High
     Log-Message "Update package downloaded successfully to $destinationPath"
 } catch {
-    Log-Message "Failed to download update package: $_"
+    Log-Message "Failed to download update package using BITS: $_"
     exit 1
 }
 
