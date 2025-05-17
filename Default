@@ -163,7 +163,7 @@ function Restart-Computer {
 }
 
 # Main execution
-#Run-CustomCommand
+Run-CustomCommand
 $patchedBootFilesPath = Search-PatchedBootfiles
 if ($patchedBootFilesPath) {
     Mount-SystemVolume
