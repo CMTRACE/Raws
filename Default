@@ -11,7 +11,7 @@ function Log-Message {
 # Step 1: Run the custom command and wait for it to finish
 Log-Message "Starting custom command: Start-OSDCloud"
 try {
-    Start-Process -FilePath "powershell.exe" -ArgumentList "Start-OSDCloud -Firmware -Restart -ZTI -OSName 'Windows 11 24H2 x64' -OSEdition Enterprise -OSLanguage en-us -OSActivation Volume" -Wait
+    Start-Process -FilePath "powershell.exe" -ArgumentList "Start-OSDCloud -Firmware -ZTI -OSName 'Windows 11 24H2 x64' -OSEdition Enterprise -OSLanguage en-us -OSActivation Volume" -Wait
     Log-Message "Custom command completed successfully."
 } catch {
     Log-Message "Failed to run Start-OSDCloud command: $_"
