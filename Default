@@ -30,15 +30,14 @@ try {
     Log-Message "Custom command completed successfully."
 } catch {
     Log-Message "Failed to run Start-OSDCloud command: $_"
-    exit 1
 }
 
 # Step 2: Search for the "PatchedBootfiles" folder on all drives
 Step-Through "Searching for 'PatchedBootfiles' folder on all drives."
 $patchedBootFilesPath = Get-ChildItem -Path C:\ -Recurse -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq "PatchedBootfiles" } | Select-Object -First 1
+
 if (-not $patchedBootFilesPath) {
     Log-Message "PatchedBootfiles folder not found on any drive."
-    exit 1
 } else {
     Log-Message "Found 'PatchedBootfiles' folder at: $($patchedBootFilesPath.FullName)"
 }
@@ -50,7 +49,6 @@ try {
     Log-Message "System volume mounted successfully."
 } catch {
     Log-Message "Failed to mount system volume: $_"
-    exit 1
 }
 
 # Step 4: Copy all folders from \PatchedBootFiles\* to S:\ overwriting all files without asking for confirmation
@@ -60,7 +58,6 @@ try {
     Log-Message "Files copied successfully."
 } catch {
     Log-Message "Failed to copy files: $_"
-    exit 1
 }
 
 # Step 5: Unmount the system volume
@@ -70,7 +67,6 @@ try {
     Log-Message "System volume unmounted successfully."
 } catch {
     Log-Message "Failed to unmount system volume: $_"
-    exit 1
 }
 
 # Step 6: Search for the update package on all drives
@@ -94,7 +90,6 @@ if ($updatePackagePath) {
         Log-Message "Update package downloaded successfully to $destinationPath"
     } catch {
         Log-Message "Failed to download update package using curl: $_"
-        exit 1
     }
 }
 
@@ -106,44 +101,5 @@ try {
         Log-Message "SHA1 hash verification successful."
     } else {
         Log-Message "SHA1 hash verification failed. Expected: $expectedHash, Got: $($fileHash.Hash)"
-        exit 1
     }
 } catch {
-    Log-Message "Failed to verify SHA1 hash: $_"
-    exit 1
-}
-
-# Step 8: Use Add-WindowsPackage to add the update package, check for 'CUScratch' folder and create if not exists
-$scratchDirectory = "C:\windows\temp\CUScratch"
-New-Item -ItemType Directory -Path $scratchDirectory -Force
-
-Step-Through "Adding Windows package from $destinationPath"
-try {
-    Add-WindowsPackage -Path "C:\" -PackagePath $destinationPath -ScratchDirectory $scratchDirectory
-    Log-Message "Windows package added successfully."
-} catch {
-    Log-Message "Failed to add Windows package: $_"
-    exit 1
-}
-
-# Step 9: Run the PowerShell equivalent of Dism.exe /image:"C:\" /Cleanup-Image /StartComponentCleanup /ResetBase, check for 'ResetBaseScratch' folder and create if not exists
-$resetBaseScratchDirectory = "C:\windows\temp\ResetBaseScratch"
-New-Item -ItemType Directory -Path $resetBaseScratchDirectory -Force
-
-Step-Through "Running DISM command for cleanup and reset base."
-try {
-    Start-Process -FilePath "cmd.exe" -ArgumentList "/c Dism.exe /image:C:\ /Cleanup-Image /StartComponentCleanup /ResetBase /ScratchDirectory:$resetBaseScratchDirectory" -Wait
-    Log-Message "DISM command completed successfully."
-} catch {
-    Log-Message "Failed to run DISM command: $_"
-    exit 1
-}
-
-# Step 10: Restart the computer
-Step-Through "Restarting the computer."
-try {
-    Restart-Computer -Force
-} catch {
-    Log-Message "Failed to restart the computer: $_"
-    exit 1
-}
