@@ -61,24 +61,34 @@ try {
     exit 1
 }
 
-# Step 6: Download the update package
-$updateUrl = "https://catalog.sf.dl.delivery.mp.microsoft.com/filestreamingservice/files/770c53ae-5610-402f-b5e9-fe86142003cc/public/windows11.0-kb5058411-x64_fc93a482441b42bcdbb035f915d4be2047d63de5.msu"
-$destinationPath = "C:\OSDCloud\CU\windows11.0-kb5058411-x64_fc93a482441b42bcdbb035f915d4be2047d63de5.msu"
-$expectedHash = "fc93a482441b42bcdbb035f915d4be2047d63de5"
+# Step 6: Search for the update package on all drives
+Log-Message "Searching for 'windows11.0-kb5058411-x64_fc93a482441b42bcdbb035f915d4be2047d63de5.msu' on all drives."
+$updatePackagePath = Get-PSDrive -PSProvider FileSystem | ForEach-Object {
+    Get-ChildItem -Path $_.Root -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq "windows11.0-kb5058411-x64_fc93a482441b42bcdbb035f915d4be2047d63de5.msu" }
+} | Select-Object -First 1
 
-if (-not (Test-Path -Path "C:\OSDCloud\CU")) {
-    New-Item -ItemType Directory -Path "C:\OSDCloud\CU"
-    Log-Message "Created directory: C:\OSDCloud\CU"
-}
+if ($updatePackagePath) {
+    Log-Message "Found update package at: $($updatePackagePath.FullName)"
+    $destinationPath = $updatePackagePath.FullName
+} else {
+    Log-Message "Update package not found on any drive. Downloading from the web."
+    $updateUrl = "https://catalog.sf.dl.delivery.mp.microsoft.com/filestreamingservice/files/770c53ae-5610-402f-b5e9-fe86142003cc/public/windows11.0-kb5058411-x64_fc93a482441b42bcdbb035f915d4be2047d63de5.msu"
+    $destinationPath = "C:\OSDCloud\CU\windows11.0-kb5058411-x64_fc93a482441b42bcdbb035f915d4be2047d63de5.msu"
+    $expectedHash = "fc93a482441b42bcdbb035f915d4be2047d63de5"
 
-Log-Message "Downloading update package from $updateUrl"
-try {
+    if (-not (Test-Path -Path "C:\OSDCloud\CU")) {
+        New-Item -ItemType Directory -Path "C:\OSDCloud\CU"
+        Log-Message "Created directory: C:\OSDCloud\CU"
+    }
+
+    Log-Message "Downloading update package from $updateUrl using curl"
+    try {
     Invoke-WebRequest -Uri $updateUrl -OutFile $destinationPath
     Log-Message "Update package downloaded successfully to $destinationPath"
-} catch {
-    Log-Message "Failed to download update package: $_"
-    exit 1
-}
+    } catch {
+        Log-Message "Failed to download update package using curl: $_"
+        exit 1
+    }
 
 # Step 7: Verify the downloaded file's SHA1 hash
 Log-Message "Verifying the SHA1 hash of the downloaded file."
