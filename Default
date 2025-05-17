@@ -85,3 +85,55 @@ if ($updatePackagePath) {
     New-Item -ItemType Directory -Path "C:\OSDCloud\CU" -Force
 
     Step-Through "Downloading update package from $updateUrl using curl"
+    try {
+        Invoke-WebRequest -Uri $updateUrl -OutFile $destinationPath
+        Log-Message "Update package downloaded successfully to $destinationPath"
+    } catch {
+        Log-Message "Failed to download update package using curl: $_"
+    }
+}
+
+# Step 7: Verify the downloaded file's SHA1 hash
+Step-Through "Verifying the SHA1 hash of the update file."
+try {
+    $fileHash = Get-FileHash -Path $destinationPath -Algorithm SHA1
+    if ($fileHash.Hash.ToLower() -eq $expectedHash.ToLower()) {
+        Log-Message "SHA1 hash verification successful."
+    } else {
+        Log-Message "SHA1 hash verification failed. Expected: $expectedHash, Got: $($fileHash.Hash)"
+    }
+} catch {
+    Log-Message "Failed to verify SHA1 hash: $_"
+}
+
+# Step 8: Use Add-WindowsPackage to add the update package, check for 'CUScratch' folder and create if not exists
+$scratchDirectory = "C:\windows\temp\CUScratch"
+New-Item -ItemType Directory -Path $scratchDirectory -Force
+
+Step-Through "Adding Windows package from $destinationPath"
+try {
+    Add-WindowsPackage -Path "C:\" -PackagePath $destinationPath -ScratchDirectory $scratchDirectory
+    Log-Message "Windows package added successfully."
+} catch {
+    Log-Message "Failed to add Windows package: $_"
+}
+
+# Step 9: Run the PowerShell equivalent of Dism.exe /image:"C:\" /Cleanup-Image /StartComponentCleanup /ResetBase, check for 'ResetBaseScratch' folder and create if not exists
+$resetBaseScratchDirectory = "C:\windows\temp\ResetBaseScratch"
+New-Item -ItemType Directory -Path $resetBaseScratchDirectory -Force
+
+Step-Through "Running DISM command for cleanup and reset base."
+try {
+    Start-Process -FilePath "cmd.exe" -ArgumentList "/c Dism.exe /image:C:\ /Cleanup-Image /StartComponentCleanup /ResetBase /ScratchDirectory:$resetBaseScratchDirectory" -Wait
+    Log-Message "DISM command completed successfully."
+} catch {
+    Log-Message "Failed to run DISM command: $_"
+}
+
+# Step 10: Restart the computer
+Step-Through "Restarting the computer."
+try {
+    Restart-Computer -Force
+} catch {
+    Log-Message "Failed to restart the computer: $_"
+}
