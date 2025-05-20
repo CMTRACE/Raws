@@ -1,4 +1,3 @@
-
 # Function to prompt user for 'y' or 'no'
 function Prompt-User {
     param (
