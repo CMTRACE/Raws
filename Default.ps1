@@ -54,7 +54,7 @@ foreach ($drive in $drives) {
         if ($found) {
             $bootEfiPath = Join-Path $found.FullName "bootx64.efi"
             $signature = Get-AuthenticodeSignature -FilePath $bootEfiPath
-            if ($signature.SignerCertificate.Subject -like "*Windows UEFI CA 2023*") {
+            if ($signature.SignerCertificate.Issuer -like "*Windows UEFI CA 2023*") {
                 $efiFolder = $found
                 break
             }
