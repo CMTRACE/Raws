@@ -1,12 +1,1 @@
-try {
-    Write-Host "Starting the OSDCloud process..."
-    Start-Process -FilePath "powershell.exe" -ArgumentList "Start-OSDCloud -Firmware -ZTI -OSName 'Windows 11 24H2 x64' -OSEdition Enterprise -OSLanguage en-us -OSActivation Volume" -Wait
-    Write-Host "OSDCloud process completed successfully."
-} catch {
-    Write-Host "An error occurred during the OSDCloud process."
-    Write-Host $_.Exception.Message
-    Pause
-}
-
-Write-Host "Pausing for user input before proceeding to the next steps..."
-Pause
+Start-Process -FilePath "powershell.exe" -ArgumentList "Start-OSDCloud -Firmware -ZTI -OSName 'Windows 11 24H2 x64' -OSEdition Enterprise -OSLanguage en-us -OSActivation Volume" -wait
