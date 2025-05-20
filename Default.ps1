@@ -42,26 +42,37 @@ if ((Test-Path X:\EFI\) -and (Test-Path S:\EFI\)) {
     }
 }
 
-# Search for 'EFI' folder containing 'bootx64.efi' signed by 'Windows UEFI CA 2023'
-$efiFolder = Get-ChildItem -Path . -Recurse -Directory -Filter "EFI" | Where-Object {
-    Test-Path "$($_.FullName)\bootx64.efi"
-} | Select-Object -First 1
+# Search all drives for 'EFI' folder containing 'bootx64.efi' signed by 'Windows UEFI CA 2023'
+$drives = Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Free -gt 0 }
+$efiFolder = $null
 
-if ($efiFolder) {
-    $bootEfiPath = Join-Path $efiFolder.FullName "bootx64.efi"
+foreach ($drive in $drives) {
     try {
-        $signature = Get-AuthenticodeSignature -FilePath $bootEfiPath
-        if ($signature.SignerCertificate.Subject -like "*Windows UEFI CA 2023*") {
-            Copy-Item -Path $efiFolder.FullName -Destination S:\ -Recurse -Force
-            Write-Host "EFI folder with signed bootx64.efi copied to S:\ successfully."
-        } else {
-            Write-Host "bootx64.efi is not signed by 'Windows UEFI CA 2023'."
+        $found = Get-ChildItem -Path "$($drive.Root)" -Recurse -Directory -ErrorAction SilentlyContinue -Force |
+            Where-Object { $_.Name -ieq "EFI" -and (Test-Path "$($_.FullName)\bootx64.efi") } |
+            Select-Object -First 1
+        if ($found) {
+            $bootEfiPath = Join-Path $found.FullName "bootx64.efi"
+            $signature = Get-AuthenticodeSignature -FilePath $bootEfiPath
+            if ($signature.SignerCertificate.Subject -like "*Windows UEFI CA 2023*") {
+                $efiFolder = $found
+                break
+            }
         }
     } catch {
-        Write-Host "Error checking signature or copying EFI folder: $($_.Exception.Message)"
+        # Ignore errors from inaccessible folders
+    }
+}
+
+if ($efiFolder) {
+    try {
+        Copy-Item -Path $efiFolder.FullName -Destination S:\ -Recurse -Force
+        Write-Host "EFI folder with signed bootx64.efi copied to S:\ successfully."
+    } catch {
+        Write-Host "Error copying EFI folder: $($_.Exception.Message)"
     }
 } else {
-    Write-Host "No EFI folder with bootx64.efi found in this directory or subdirectories."
+    Write-Host "No EFI folder with bootx64.efi signed by 'Windows UEFI CA 2023' found on any drive."
 }
 
 # Step 4: Run mountvol S: /d
