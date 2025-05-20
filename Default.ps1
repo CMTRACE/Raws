@@ -43,7 +43,7 @@ if ((Test-Path X:\EFI\) -and (Test-Path S:\EFI\)) {
 }
 
 # Search all drives for 'EFI' folder containing 'bootx64.efi' issued by 'Windows UEFI CA 2023'
-$drives = Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Free -gt 0 }
+$drives = Get-PSDrive -PSProvider FileSystem
 $efiFolder = $null
 
 foreach ($drive in $drives) {
