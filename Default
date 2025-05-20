@@ -1,34 +1,13 @@
-# Enhanced PowerShell Script with Detailed Logging and Step-by-Step Execution Mode
 
-function Log-Message {
-    param (
-        [string]$message
-    )
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $logMessage = "$timestamp - $message"
-    Write-Output $logMessage
-}
-
-function Step-Through {
-    param (
-        [string]$message
-    )
-    Log-Message $message
-    Write-Host "Press space to continue..."
-    while ($true) {
-        $key = [System.Console]::ReadKey($true)
-        if ($key.Key -eq [System.ConsoleKey]::Spacebar) {
-            break
-        }
-    }
-}
-
-# Step 1: Run the custom command and wait for it to finish
-Step-Through "Starting custom command: Start-OSDCloud"
 try {
-    Start-Process -FilePath "powershell.exe" -ArgumentList "Start-OSDCloud -Firmware -ZTI -OSName 'Windows 11 24H2 x64' -OSEdition Enterprise -OSLanguage en-us -OSActivation Volume" -Wait
-    Log-Message "Custom command completed successfully."
+    Write-Host "Starting the OSDCloud process..."
+    Start-Process -FilePath "powershell.exe" -ArgumentList "Start-OSDCloud -Firmware -ZTI -OSName 'Windows 11 24H2 x64' -OSEdition Enterprise -OSLanguage en-us -OSActivation Volume" -Wait
+    Write-Host "OSDCloud process completed successfully."
 } catch {
-    Log-Message "Failed to run Start-OSDCloud command: $_"
+    Write-Host "An error occurred during the OSDCloud process."
+    Write-Host $_.Exception.Message
+    Pause
 }
 
+Write-Host "Pausing for user input before proceeding to the next steps..."
+Pause
