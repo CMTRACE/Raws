@@ -42,7 +42,7 @@ if ((Test-Path X:\EFI\) -and (Test-Path S:\EFI\)) {
     }
 }
 
-# Search all drives for 'EFI' folder containing 'bootx64.efi' signed by 'Windows UEFI CA 2023'
+# Search all drives for 'EFI' folder containing 'bootx64.efi' issued by 'Windows UEFI CA 2023'
 $drives = Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Free -gt 0 }
 $efiFolder = $null
 
@@ -54,7 +54,7 @@ foreach ($drive in $drives) {
         if ($found) {
             $bootEfiPath = Join-Path $found.FullName "bootx64.efi"
             $signature = Get-AuthenticodeSignature -FilePath $bootEfiPath
-            if ($signature.SignerCertificate.Issuer -like "*Windows UEFI CA 2023*") {
+            if ($signature.SignerCertificate.IssuerName -like "*Windows UEFI CA 2023*") {
                 $efiFolder = $found
                 break
             }
@@ -72,7 +72,7 @@ if ($efiFolder) {
         Write-Host "Error copying EFI folder: $($_.Exception.Message)"
     }
 } else {
-    Write-Host "No EFI folder with bootx64.efi signed by 'Windows UEFI CA 2023' found on any drive."
+    Write-Host "No EFI folder with bootx64.efi issuedy by 'Windows UEFI CA 2023' found on any drive."
 }
 
 # Step 4: Run mountvol S: /d
