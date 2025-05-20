@@ -3,7 +3,7 @@ Try {
     Start-OSDCloud -Firmware -ZTI -OSName 'Windows 11 24H2 x64' -OSEdition Enterprise -OSLanguage en-us -OSActivation Volume
     Write-Host "OSDCloud deployment completed."
 
-    $UpdatePath = 'D:\CU\windows11.0-kb5058411-x64_2025-05.msu'
+    $UpdatePath = 'D:\osdcloud\windows11.0-kb5058411-x64_2025-05.msu'
     Write-Host "Adding Windows package: $UpdatePath"
     Add-WindowsPackage -PackagePath $UpdatePath -Path 'C:\'
     Write-Host "Windows package added."
