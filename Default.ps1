@@ -8,7 +8,7 @@ catch {
 }
 
 try {
-    Add-WindowsPackage -PackagePath 'D:\osdcloud\windows11.0-kb5058411-x64_2025-05.msu' -Path 'c:\'
+    Add-WindowsPackage -PackagePath 'D:\osd\windows11.0-kb5058411-x64_2025-05.msu' -Path 'c:\'
     Write-Host "Add-WindowsPackage completed successfully." -ForegroundColor Green
 }
 catch {
