@@ -1,82 +1,39 @@
-# Function to prompt user for 'y' or 'no'
-function Read-UserInput {
-    param (
-        [string]$message
-    )
-    do {
-        $response = (Read-Host "$message (y/no)").ToLower()
-        $isInvalidResponse = $response -ne 'y' -and $response -ne 'no'
-        if ($isInvalidResponse) {
-            Write-Host "Invalid input. Please enter 'y' for yes or 'no' for no."
-        }
-    } while ($isInvalidResponse)
-    return $response
-}
-
-# Step 1: Run custom PowerShell command
-$response = Read-UserInput "Do you want to run the custom PowerShell command: Start-OSDCloud -Firmware -ZTI -OSName 'Windows 11 24H2 x64' -OSEdition Enterprise -OSLanguage en-us -OSActivation Volume?"
-if ($response -eq 'y') {
+try {
     Start-OSDCloud -Firmware -ZTI -OSName 'Windows 11 24H2 x64' -OSEdition Enterprise -OSLanguage en-us -OSActivation Volume
+    Write-Host "Start-OSDCloud completed successfully." -ForegroundColor Green
+}
+catch {
+    Write-Host "Error in Start-OSDCloud: $_" -ForegroundColor Red
+    
 }
 
-# Step 2: Run mountvol S: /S
-$response = Read-UserInput "Do you want to run: mountvol S: /S?"
-if ($response -eq 'y') {
-    mountvol S: /S
+try {
+    Add-WindowsPackage -PackagePath 'D:\osdcloud\windows11.0-kb5058411-x64_2025-05.msu' -Path 'c:\'
+    Write-Host "Add-WindowsPackage completed successfully." -ForegroundColor Green
+}
+catch {
+    Write-Host "Error in Add-WindowsPackage: $_" -ForegroundColor Red
+    
 }
 
-# Step 3: Copy EFI files from X: drive to S:\, overwriting all files
-if ((Test-Path X:\EFI\) -and (Test-Path S:\EFI\)) {
-    try {
-        Copy-Item -Path X:\EFI\* -Destination S:\EFI\ -Recurse -Force -ErrorAction Stop
-        Write-Host "EFI files copied successfully."
-    } catch {
-        Write-Host "Error: Failed to copy EFI files. Details: $($_.Exception.Message)"
-    }
+try {
+$process = Start-Process -FilePath "C:\Windows\System32\bcdboot.exe" -ArgumentList "C:\Windows", "/v", "/c" -Wait -NoNewWindow -PassThru
+if ($process.ExitCode -eq 0) {
+    Write-Host "bcdboot executed successfully." -ForegroundColor Green
 } else {
-    if (-not (Test-Path X:\EFI\)) {
-        Write-Host "Error: Source path 'X:\EFI\' does not exist."
-    }
-    if (-not (Test-Path S:\EFI\)) {
-        Write-Host "Error: Destination path 'S:\EFI\' does not exist."
-    }
+    Write-Host "bcdboot failed with exit code $($process.ExitCode)." -ForegroundColor Red
+}
+}
+catch {
+    Write-Host "Error running bcdboot: $_" -ForegroundColor Red
+    
 }
 
-# Search all drives for 'EFI' folder containing 'bootx64.efi' issued by 'Windows UEFI CA 2023'
-$drives = Get-PSDrive -PSProvider FileSystem
-$efiFolder = $null
-
-foreach ($drive in $drives) {
-    try {
-        $found = Get-ChildItem -Path "$($drive.Root)" -Recurse -Directory -ErrorAction SilentlyContinue -Force |
-            Where-Object { $_.Name -ieq "EFI" -and (Test-Path "$($_.FullName)\bootx64.efi") } |
-            Select-Object -First 1
-        if ($found) {
-            $bootEfiPath = Join-Path $found.FullName "bootx64.efi"
-            $signature = Get-AuthenticodeSignature -FilePath $bootEfiPath
-            if ($signature.SignerCertificate.IssuerName -like "*Windows UEFI CA 2023*") {
-                $efiFolder = $found
-                break
-            }
-        }
-    } catch {
-        # Ignore errors from inaccessible folders
-    }
+try {
+    Restart-Computer
+    Write-Host "Restart-Computer command issued." -ForegroundColor Green
 }
-
-if ($efiFolder) {
-    try {
-        Copy-Item -Path $efiFolder.FullName -Destination S:\ -Recurse -Force
-        Write-Host "EFI folder with signed bootx64.efi copied to S:\ successfully."
-    } catch {
-        Write-Host "Error copying EFI folder: $($_.Exception.Message)"
-    }
-} else {
-    Write-Host "No EFI folder with bootx64.efi issuedy by 'Windows UEFI CA 2023' found on any drive."
-}
-
-# Step 4: Run mountvol S: /d
-$response = Read-UserInput "Do you want to run: mountvol S: /d?"
-if ($response -eq 'y') {
-    mountvol S: /d
+catch {
+    Write-Host "Error restarting computer: $_" -ForegroundColor Red
+    
 }
