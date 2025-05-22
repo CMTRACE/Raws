@@ -36,8 +36,23 @@ if ($UpdateUrl -like "*$sha1*") {
 } else {
     Write-Host "ERROR: SHA1 hash of file does not match the URL. Aborting package installation."
     Throw "SHA1 hash mismatch."
-}`
+}
 
+# Check for Windows UEFI CA 2023 in Secure Boot Database
+$uefiDbString = [System.Text.Encoding]::ASCII.GetString((Get-SecureBootUEFI db).bytes)
+if ($uefiDbString -match 'Windows UEFI CA 2023') {
+    Write-Host "The Windows UEFI CA 2023 has been detected in the UEFI Secure Boot Database"
+} else {
+    Write-Host "The Windows UEFI CA 2023 was NOT detected in the UEFI Secure Boot Database"
+}
+
+# Check for Microsoft Windows Production PCA 2011 in banned certificates database
+$uefiDbxString = [System.Text.Encoding]::ASCII.GetString((Get-SecureBootUEFI dbx).bytes)
+if ($uefiDbxString -match 'Microsoft Windows Production PCA 2011') {
+    Write-Host "The Microsoft Windows Production PCA 2011 certificate has been revoked and is present in the banned certificates database"
+} else {
+    Write-Host "The Microsoft Windows Production PCA 2011 certificate is NOT present in the banned certificates database"
+}
     Write-Host "Updating boot files with bcdboot..."
     Start-Process -FilePath "C:\Windows\System32\bcdboot.exe" -ArgumentList "C:\Windows", "/v", "/c" -Wait -NoNewWindow -PassThru
     Write-Host "Boot files updated."
