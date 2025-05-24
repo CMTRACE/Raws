@@ -62,7 +62,7 @@ if ($uefiDbxString -match 'Microsoft Windows Production PCA 2011') {
     Write-Host "DISM cleanup completed."
 
     Write-Host "Restarting computer..."
-    Restart-Computer
+    #Restart-Computer
 }
 Catch {
     Write-Host "ERROR: $($_.Exception.Message)"
