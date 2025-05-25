@@ -93,7 +93,7 @@ Function Acquire-Update
         if (-not $success) {
             Write-Error "Failed to download $fileName from $url after $maxRetries attempts."
         }
-    }   #we then verify the SHA1 hash by first caluralting the hash of the downloaded file, then we look for this hash is contained anywhere 
+    }   #we then verify the SHA1 hash by first caluralting the hash of the downloaded file, then we look if this hash is contained anywhere 
         # in the URL string
     $downloadedFilePath = Join-Path -Path $destinationPath -ChildPath $fileName
     if (Test-Path -Path $downloadedFilePath) {
