@@ -242,8 +242,7 @@ $mainImagePath = "C:\" # we assume the main image is located in C:\
 $cuUpdatePath = Join-Path -Path $rootPath -ChildPath "CumulativeUpdates"
 
 # using the below comands to sheck the status of the secure boot databases, we will log the results to the console  
-#[System.Text.Encoding]::ASCII.GetString((Get-SecureBootUEFI db).bytes)
-#[System.Text.Encoding]::ASCII.GetString((Get-SecureBootUEFI dbx).bytes)
+
 $GetSecureBootUEFIdb = [System.Text.Encoding]::ASCII.GetString((Get-SecureBootUEFI db).bytes)
 if ($GetSecureBootUEFIdb -match 'Windows UEFI CA 2023') {
     Write-Host "Secure Boot Database is enabled and has the 'Windows UEFI CA 2023' certificate is present."
