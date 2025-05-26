@@ -1,6 +1,31 @@
 # BlackLotus-mitigated Windows 11 24H2 Provisioning Script
 # Requires: OSDCloud module, administrative privileges
 
+#define variables
+$updateUrls = @{
+    CumulativeUpdates = @(
+        "https://catalog.sf.dl.delivery.mp.microsoft.com/filestreamingservice/files/d8b7f92b-bd35-4b4c-96e5-46ce984b31e0/public/windows11.0-kb5043080-x64_953449672073f8fb99badb4cc6d5d7849b9c83e8.msu",
+        "https://catalog.sf.dl.delivery.mp.microsoft.com/filestreamingservice/files/770c53ae-5610-402f-b5e9-fe86142003cc/public/windows11.0-kb5058411-x64_fc93a482441b42bcdbb035f915d4be2047d63de5.msu"
+    )
+    SafeOSUpdates = @(
+        "https://catalog.sf.dl.delivery.mp.microsoft.com/filestreamingservice/files/88eb0a1d-e6d0-4842-8c04-e184220cd092/public/windows11.0-kb5059442-x64_d96d5a62d0a410fd8b07cb3098908e21a4c01c63.cab"
+    )
+    SetupUpdates = @(
+        "https://catalog.sf.dl.delivery.mp.microsoft.com/filestreamingservice/files/9d1ab951-3e80-490b-bf90-8c2fe5c2b549/public/windows11.0-kb5059806-x64_b607edb8a152d38998211802d01b63e5acc23de3.cab"
+    )
+    DotNetUpdates = @(
+        "https://catalog.sf.dl.delivery.mp.microsoft.com/filestreamingservice/files/02cd9c83-8312-424d-9a06-b042095804a8/public/windows11.0-kb5054979-x64-ndp481_8e2f730bc747de0f90aaee95d4862e4f88751c07.msu"
+    )
+}
+
+
+$ErrorActionPreference = "Stop"
+# Ensure the OSDCloud module is available
+if (-not (Get-Module -ListAvailable -Name OSDCloud)) {
+    Write-Error "OSDCloud module is not available. Please install it before running this script."
+    exit 1
+}
+
 # --- Utility Functions ---
 
 function New-RootFolder {
@@ -181,21 +206,6 @@ $rootPath = New-RootFolder
 if ($null -eq $rootPath) { exit 1 }
 New-SubFolders -RootPath $rootPath
 
-$updateUrls = @{
-    CumulativeUpdates = @(
-        "https://catalog.sf.dl.delivery.mp.microsoft.com/filestreamingservice/files/d8b7f92b-bd35-4b4c-96e5-46ce984b31e0/public/windows11.0-kb5043080-x64_953449672073f8fb99badb4cc6d5d7849b9c83e8.msu",
-        "https://catalog.sf.dl.delivery.mp.microsoft.com/filestreamingservice/files/770c53ae-5610-402f-b5e9-fe86142003cc/public/windows11.0-kb5058411-x64_fc93a482441b42bcdbb035f915d4be2047d63de5.msu"
-    )
-    SafeOSUpdates = @(
-        "https://catalog.sf.dl.delivery.mp.microsoft.com/filestreamingservice/files/88eb0a1d-e6d0-4842-8c04-e184220cd092/public/windows11.0-kb5059442-x64_d96d5a62d0a410fd8b07cb3098908e21a4c01c63.cab"
-    )
-    SetupUpdates = @(
-        "https://catalog.sf.dl.delivery.mp.microsoft.com/filestreamingservice/files/9d1ab951-3e80-490b-bf90-8c2fe5c2b549/public/windows11.0-kb5059806-x64_b607edb8a152d38998211802d01b63e5acc23de3.cab"
-    )
-    DotNetUpdates = @(
-        "https://catalog.sf.dl.delivery.mp.microsoft.com/filestreamingservice/files/02cd9c83-8312-424d-9a06-b042095804a8/public/windows11.0-kb5054979-x64-ndp481_8e2f730bc747de0f90aaee95d4862e4f88751c07.msu"
-    )
-}
 
 # Download or locate updates and verify hashes
 foreach ($updateType in $updateUrls.Keys) {
