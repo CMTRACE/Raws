@@ -27,8 +27,8 @@ if (-not (Get-Module -ListAvailable -Name OSDCloud)) {
 }
 
 # --- Utility Functions ---
-
-function New-RootFolder {
+function Initialize-BuildFolders {
+    # Creates a root build folder with subfolders for updates and mount points.
     $date = Get-Date -Format "yyyy-MM-dd"
     $rootPath = "C:\Windows\Temp\BuildRoot-$date"
     if (Test-Path -Path $rootPath) {
@@ -40,18 +40,15 @@ function New-RootFolder {
         }
     }
     New-Item -Path $rootPath -ItemType Directory | Out-Null
-    return $rootPath
-}
 
-function New-SubFolders {
-    param([string]$RootPath)
     $folders = @("CumulativeUpdates", "SafeOSUpdates", "SetupUpdates", "Mount", "DotNetUpdates")
     foreach ($folder in $folders) {
-        $path = Join-Path -Path $RootPath -ChildPath $folder
+        $path = Join-Path -Path $rootPath -ChildPath $folder
         if (-not (Test-Path $path)) {
             New-Item -Path $path -ItemType Directory | Out-Null
         }
     }
+    return $rootPath
 }
 
 function Get-UpdateFile {
@@ -202,9 +199,26 @@ function Test-SecureBootDatabases {
 
 Start-OSDCloud -Firmware -ZTI -OSName 'Windows 11 24H2 x64' -OSEdition Enterprise -OSLanguage en-us -OSActivation Volume
 
-$rootPath = New-RootFolder
-if ($null -eq $rootPath) { exit 1 }
-New-SubFolders -RootPath $rootPath
+New-BuildFolders
+# Initialize build folders
+$rootPath = Initialize-BuildFolders
+if (-not $rootPath) {
+    Write-Error "Failed to initialize build folders. Exiting script."
+    exit 1
+}
+# Ensure the root path exists
+if (-not (Test-Path $rootPath)) {
+    Write-Error "Root path $rootPath does not exist. Exiting script."
+    exit 1
+}
+# Create subdirectories for updates
+$subDirs = @("CumulativeUpdates", "SafeOSUpdates", "SetupUpdates", "Mount", "DotNetUpdates")
+foreach ($subDir in $subDirs) {
+    $path = Join-Path -Path $rootPath -ChildPath $subDir
+    if (-not (Test-Path $path)) {
+        New-Item -Path $path -ItemType Directory | Out-Null
+    }
+}
 
 
 # Download or locate updates and verify hashes
