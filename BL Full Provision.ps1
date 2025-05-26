@@ -206,7 +206,8 @@ foreach ($updateType in $updateUrls.Keys) {
 }
 
 # Mount WinRE image
-$winREImagePath = "c:\Windows\System32\Recovery\Winre.wim"
+
+$winREImagePath = "C:\Windows\system32\recovery\winRE.wim" # we assume the WinRE image is located on the C: drive
 if (-not (Test-Path $winREImagePath)) {
     Write-Error "WinRE image not found at $winREImagePath. Ensure the path is correct."
     exit 1
