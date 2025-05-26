@@ -40,7 +40,7 @@ Function New-RootFolder {
     New-Item -Path $rootPath -ItemType Directory | Out-Null
     return $rootPath
 }
-Function Create-SubFolders {
+Function New-SubFolders {
     param (
         [string]$rootPath
     )
@@ -52,7 +52,7 @@ Function Create-SubFolders {
     }
 }
 
-Function Acquire-Update
+Function Get-Update
  {
     # we take a URL and destination path as parameters
     param (
@@ -136,7 +136,7 @@ Function Mount-WinREImage {
     }
 }   
 
-Function Apply-Update { 
+Function Invoke-Update { 
     # this function applies updates to the mounted WinRE image
     # it takes the downloaded update path and the mounting path as parameter
     param (
@@ -180,7 +180,7 @@ Function invoke-DISMCommand {
 Start-OSDCloud -Firmware -ZTI -OSName 'Windows 11 24H2 x64' -OSEdition Enterprise -OSLanguage en-us -OSActivation Volume
 
 $rootPath = New-RootFolder
-Create-SubFolders -rootPath $rootPath
+New-SubFolders -rootPath $rootPath
 # Define URLs for updates
 $updateUrls = @{
     CumulativeUpdates = @(
@@ -201,7 +201,7 @@ $updateUrls = @{
 foreach ($updateType in $updateUrls.Keys) {
     $updatePath = Join-Path -Path $rootPath -ChildPath $updateType
     foreach ($url in $updateUrls[$updateType]) {
-        Acquire-Update -url $url -destinationPath $updatePath
+        Get-Update -url $url -destinationPath $updatePath
     }
 }
 # Mount WinRE image
@@ -212,17 +212,17 @@ Mount-WinREImage -imagePath $winREImagePath -mountPath $mountPath
 # Apply updates to the mounted WinRE image
 $updatePaths = Join-Path -Path $rootPath -ChildPath "CumulativeUpdates"
 # feed path into apply-update function, we dont need for each update as we are applying all updates in the folder so we just pas the path
-Apply-Update -updatePath $updatePaths -mountPath $mountPath 
+Invoke-Update -updatePath $updatePaths -mountPath $mountPath 
 # Apply SafeOS updates
 $safeOSUpdatePath = Join-Path -Path $rootPath -ChildPath "SafeOSUpdates"
-Apply-Update -updatePath $safeOSUpdatePath -mountPath $mountPath
+Invoke-Update -updatePath $safeOSUpdatePath -mountPath $mountPath
 # Check for signed *.efi files in the mounted OS
 $efiFiles = Get-ChildItem -Path $mountPath -Recurse -Filter "*.efi"
 foreach ($efiFile in $efiFiles) {
     $signature = Get-AuthenticodeSignature -FilePath $efiFile.FullName
-    if ($signature.Status -eq "Valid" -and $signature.SignerCertificate -ne $null -and $signature.SignerCertificate.Subject -like "*2023*") {
+    if ($signature.Status -eq "Valid" -and $null -ne $signature.SignerCertificate -and $signature.SignerCertificate.Subject -like "*2023*") {
         Write-Host "Valid signature found for $($efiFile.FullName) signed by a CA with 2023 in the name."
-    } elseif ($signature.SignerCertificate -eq $null) {
+    } elseif ($null -eq $signature.SignerCertificate) {
         Write-Host "Invalid or unsigned file: $($efiFile.FullName). SignerCertificate is null."
     } else {
         Write-Host "Invalid or unsigned file: $($efiFile.FullName). Actual: $($signature.SignerCertificate.Subject)"
@@ -237,9 +237,6 @@ if (Test-Path -Path $mountPath) {
 } else {
     Write-Error "Mount path $mountPath does not exist. Cannot dismount the image."
 }
-# Apply updates to the main Windows 11 image
-$mainImagePath = "C:\" # we assume the main image is located in C:\
-$cuUpdatePath = Join-Path -Path $rootPath -ChildPath "CumulativeUpdates"
 
 # using the below comands to sheck the status of the secure boot databases, we will log the results to the console  
 
