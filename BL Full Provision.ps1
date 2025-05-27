@@ -229,7 +229,7 @@ foreach ($updateType in $updateUrls.Keys) {
     }
 }
 
-# Mount WinRE image
+# TODO Mount WinRE image
 
 $winREImagePath = "C:\Windows\system32\recovery\winRE.wim" # we assume the WinRE image is located on the C: drive
 if (-not (Test-Path $winREImagePath)) {
@@ -259,7 +259,7 @@ if (Test-Path $mountPath) {
     Write-Error "Mount path $mountPath does not exist. Cannot dismount the image."
 }
 
-# Check Secure Boot Databases
+# TODO Check Secure Boot Databases
 Test-SecureBootDatabases
 
 # End of script
