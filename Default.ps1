@@ -15,7 +15,7 @@ $Global:MyOSDCloud = [ordered]@{
     ClearDiskConfirm = [bool]$false
     ShutdownSetupComplete = [bool]$false
     SyncMSUpCatDriverUSB = [bool]$false
-    CheckSHA1 = [bool]$true
+    CheckSHA1 = [bool]$false
 }
 
 #Copy CMTrace Local:
