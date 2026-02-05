@@ -1,4 +1,4 @@
-$OSName = 'Windows 11 24H2 x64'
+$OSName = 'Windows 11 25H2 x64'
 $OSEdition = 'Enterprise'
 $OSActivation = 'Volume'
 $OSLanguage = 'en-us'
@@ -8,7 +8,7 @@ $Global:MyOSDCloud = [ordered]@{
     Restart = [bool]$true
     RecoveryPartition = [bool]$true
     OEMActivation = [bool]$true
-    WindowsUpdate = [bool]$false
+    WindowsUpdate = [bool]$true
     WindowsUpdateDrivers = [bool]$false
     WindowsDefenderUpdate = [bool]$false
     SetTimeZone = [bool]$true
